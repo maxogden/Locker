@@ -1,0 +1,8 @@
+{
+	"title":"Google Groups",
+	"action":"Archive a Google Group",
+	"desc":"Collect and sync all the posts from a public Google Group.",
+	"run":"node client.js",
+	"status":"unstable",
+	"provides":["messages/googlegroups"]
+}
