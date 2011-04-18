@@ -44,7 +44,7 @@ function(req, res) {
     });
     res.end("<html> Enter your Google Group Name" +
             "<form method='get' action='save'>" +
-                "Name: <input name='groupUrl'><br>" +
+                "Name: <input name='url'><br>" +
                 "<input type='submit' value='Save'>" +
             "</form></html>");
     return;
@@ -52,14 +52,11 @@ function(req, res) {
 
 app.get('/save',
 function(req, res) {
-    res.writeHead(200, {
-        'Content-Type': 'text/html'
-    });
-    if(!req.param('groupUrl')) {
+    if(!req.param('url')) {
         res.end("missing field(s)?");
         return;
     }
-    group = req.param('groupUrl');
+    group = req.param('url');
     lfs.writeObjectToFile('group.json', group);
     res.redirect("/feed");
 });
@@ -76,7 +73,7 @@ function(req, res) {
         res.end();
     });
     pullNewsFeed(function() {
-        locker.at('/feed', 3600);
+        locker.at('/feed', 10);
         res.end();
     });
 });
@@ -84,6 +81,7 @@ function(req, res) {
 function fetchFeed(feedUrl, callback) {  
   var feed = url.parse(feedUrl);
   request({uri:feed.href}, function (error, resp, body) {
+    sys.log('BODY:' + body + "-  " + feedUrl);
     if (error) stdout.write(JSON.stringify(["error", sys.error(error.stack)])+'\n');
     jsdom.env(body, ['jquery.js', 'jfeed.js', 'jatom.js', 'jfeeditem.js', 'jrss.js'], function(errors, window) {
       var jf = new window.JFeed(window.document);
@@ -99,22 +97,23 @@ function pullNewsFeed(since, items, callback) {
     var since = latests.feed.latest;
     var params = {};
     if(since) params.since = since;
-    var ggurl = "https://groups.google.com/group/" + group.url + "/feed/rss_v2_0_msgs.xml?num=100";
+    var ggurl = "https://groups.google.com/group/" + group + "/feed/rss_v2_0_msgs.xml?num=100";
     fetchFeed(ggurl, function(feed) {
-        if(result.data.length > 0) {
-            var t = result.data[0].updated_time;
-            if(!latests.feed.latest || t > latests.feed.latest)
-                latests.feed.latest = t;
-            console.log(JSON.stringify(latests));
-            for(var i = 0; i < result.data.length; i++)
-                items.push(result.data[i]);
-            var next = result.paging.next;
-            var until = unescape(next.substring(next.lastIndexOf("&until=") + 7));
-            pullNewsFeedPage(until, since, items, callback);
-        } else if(callback) {
-            lfs.writeObjectToFile('latests.json', latests);
-            callback();
-        }
+      sys.log(JSON.stringify(feed))
+        // if(feed.items.length > 0) {
+        //     var t = result.data[0].updated_time;
+        //     if(!latests.feed.latest || t > latests.feed.latest)
+        //         latests.feed.latest = t;
+        //     console.log(JSON.stringify(latests));
+        //     for(var i = 0; i < result.data.length; i++)
+        //         items.push(result.data[i]);
+        //     var next = result.paging.next;
+        //     var until = unescape(next.substring(next.lastIndexOf("&until=") + 7));
+        //     pullNewsFeedPage(until, since, items, callback);
+        // } else if(callback) {
+        //     lfs.writeObjectToFile('latests.json', latests);
+        //     callback();
+        // }
     });
 }
 
